@@ -12,6 +12,93 @@ local CurrentKeybind = Enum.KeyCode.L
 local IsChangingKeybind = false
 local IsTeleportingHitbox = false 
 
+-- --- SYSTÈME DE TOGGLE : AUTO FARM (AVEC PRIORITÉ & INTERACTION PROXIMITY) ---
+local AutoFarmActive = false
+local PREFERENCE_ITEMS = {"Dark Matter", "Moon", "Acid Barrel", "Alien Head"}
+
+-- Fonction pour trouver le meilleur item présent selon la hiérarchie
+local function getBestAvailableItem()
+	for _, itemName in ipairs(PREFERENCE_ITEMS) do
+		-- On cherche dans tout le Workspace un objet/modèle portant ce nom exact
+		for _, object in pairs(Workspace:GetDescendants()) do
+			if object.Name == itemName and (object:IsA("BasePart") or object:IsA("Model")) then
+				-- Vérification de sécurité : s'assurer qu'il a un ProximityPrompt valide
+				local prompt = object:FindFirstChildWhichIsA("ProximityPrompt", true)
+				if prompt and prompt.Enabled then
+					return object, prompt
+				end
+			end
+		end
+	end
+	return nil, nil
+end
+
+-- Boucle principale de l'Auto Farm
+local function startAutoFarmLoop()
+	task.spawn(function()
+		while AutoFarmActive do
+			local character = LocalPlayer.Character
+			local hrp = character and character:FindFirstChild("HumanoidRootPart")
+			
+			if hrp then
+				local targetObject, targetPrompt = getBestAvailableItem()
+				
+				if targetObject and targetPrompt then
+					-- Déterminer la position de TP (BasePart directe ou PrimaryPart d'un modèle)
+					local targetCFrame = nil
+					if targetObject:IsA("BasePart") then
+						targetCFrame = targetObject.CFrame
+					elseif targetObject:IsA("Model") and targetObject.PrimaryPart then
+						targetCFrame = targetObject.PrimaryPart.CFrame
+					elseif targetObject:IsA("Model") then
+						-- Secours si le modèle n'a pas de PrimaryPart définie
+						local part = targetObject:FindFirstChildWhichIsA("BasePart", true)
+						if part then targetCFrame = part.CFrame end
+					end
+					
+					if targetCFrame then
+						-- 1. Téléportation sur l'item
+						hrp.CFrame = targetCFrame * CFrame.new(0, 2, 0) -- Un tout petit peu au-dessus pour éviter les bugs de sol
+						print("[AUTO-FARM] TP sur l'item prioritaire trouvé : " .. targetObject.Name)
+						
+						-- 2. Interaction automatique instantanée avec le ProximityPrompt (Simule la touche E)
+						task.spawn(function()
+							task.wait(0.1) -- Léger délai pour s'assurer que la physique suit après le TP
+							if targetPrompt and targetPrompt.Enabled then
+								targetPrompt:InputHoldBegin()
+								task.wait(targetPrompt.HoldDuration)
+								targetPrompt:InputHoldEnd()
+								print("[AUTO-FARM] Interaction 'E' validée pour : " .. targetObject.Name)
+							end
+						end)
+						
+						-- 3. Attente stricte de 3 secondes avant la prochaine recherche
+						task.wait(3)
+					else
+						task.wait(0.5)
+					end
+				else
+					-- Aucun item trouvé sur la map, on patiente un peu avant de re-scanner
+					task.wait(0.5)
+				end
+			else
+				task.wait(1)
+			end
+		end
+	end)
+end
+
+local function toggleAutoFarm(state)
+	AutoFarmActive = state
+	if AutoFarmActive then
+		print("[AUTO-FARM] Activé - Chasse aux items prioritaires en cours...")
+		startAutoFarmLoop()
+	else
+		print("[AUTO-FARM] Désactivé")
+	end
+end
+
+
 -- --- SYSTÈME DE TOGGLE : ESP ---
 local EspActive = false
 local EspConnection = nil
@@ -21,6 +108,7 @@ local CONFIG_CIBLES = {
 	["Acid Barrel"]   = Color3.fromRGB(0, 100, 0),
 	["Moon"]          = Color3.fromRGB(48, 25, 52),
 	["Glitched Cube"] = Color3.fromRGB(75, 0, 130),
+	["Alien Head"]    = Color3.fromRGB(0, 255, 120),
 }
 
 local function injectHighlight(objet)
@@ -128,7 +216,7 @@ if ancienMenu then
 	print("[ANTI-DOUBLON] Ancien menu détruit.")
 end
 
--- 1. CRÉATION DE L'INTERFACE PRINCIPALE HAUTE QUALITÉ
+-- 1. CRÉATION DE L'INTERFACE PRINCIPALE HAUTE QUALITÉ (Taille ajustée pour le nouveau bouton)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GestionnaireMachineStylise"
 ScreenGui.ResetOnSpawn = false
@@ -136,8 +224,8 @@ ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 310, 0, 480)
-MainFrame.Position = UDim2.new(0.5, -155, 0.5, -240)
+MainFrame.Size = UDim2.new(0, 310, 0, 520) -- Ajusté à 520 pour accueillir proprement le nouveau menu
+MainFrame.Position = UDim2.new(0.5, -155, 0.5, -260)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -207,7 +295,7 @@ MachinePage.Size = UDim2.new(1, 0, 1, -42)
 MachinePage.Position = UDim2.new(0, 0, 0, 42)
 MachinePage.BackgroundTransparency = 1
 MachinePage.BorderSizePixel = 0
-MachinePage.CanvasSize = UDim2.new(0, 0, 0, 440)
+MachinePage.CanvasSize = UDim2.new(0, 0, 0, 490)
 MachinePage.ScrollBarThickness = 2
 MachinePage.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 70)
 MachinePage.Parent = MainFrame
@@ -299,7 +387,6 @@ Sect2Title.TextSize = 11
 Sect2Title.TextXAlignment = Enum.TextXAlignment.Left
 Sect2Title.Parent = MachinePage
 
--- Ligne double boutons (UI de vente & Remote Vente)
 local SaleRowFrame = Instance.new("Frame")
 SaleRowFrame.Size = UDim2.new(0, 270, 0, 34)
 SaleRowFrame.BackgroundTransparency = 1
@@ -332,7 +419,6 @@ local SellRemoteCorner = Instance.new("UICorner")
 SellRemoteCorner.CornerRadius = UDim.new(0, 6)
 SellRemoteCorner.Parent = SellAllRemoteButton
 
--- **NOUVEAU BOUTON : HIT WALL**
 local HitWallButton = Instance.new("TextButton")
 HitWallButton.Name = "HitWallButton"
 HitWallButton.Size = UDim2.new(0, 270, 0, 36)
@@ -358,6 +444,41 @@ Sect3Title.Font = Enum.Font.GothamBold
 Sect3Title.TextSize = 11
 Sect3Title.TextXAlignment = Enum.TextXAlignment.Left
 Sect3Title.Parent = MachinePage
+
+-- NOUVEAU TOGGLE : AUTO FARM ITEMS
+local AutoFarmToggleFrame = Instance.new("Frame")
+AutoFarmToggleFrame.Size = UDim2.new(0, 270, 0, 34)
+AutoFarmToggleFrame.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+AutoFarmToggleFrame.Parent = MachinePage
+
+local AutoFarmToggleCorner = Instance.new("UICorner")
+AutoFarmToggleCorner.CornerRadius = UDim.new(0, 6)
+AutoFarmToggleCorner.Parent = AutoFarmToggleFrame
+
+local AutoFarmLabel = Instance.new("TextLabel")
+AutoFarmLabel.Size = UDim2.new(0, 160, 1, 0)
+AutoFarmLabel.Position = UDim2.new(0, 10, 0, 0)
+AutoFarmLabel.BackgroundTransparency = 1
+AutoFarmLabel.Text = "Auto Farm Items"
+AutoFarmLabel.TextColor3 = Color3.fromRGB(255, 215, 0) -- Couleur Dorée Distinctive
+AutoFarmLabel.Font = Enum.Font.GothamBold
+AutoFarmLabel.TextSize = 12
+AutoFarmLabel.TextXAlignment = Enum.TextXAlignment.Left
+AutoFarmLabel.Parent = AutoFarmToggleFrame
+
+local AutoFarmButton = Instance.new("TextButton")
+AutoFarmButton.Size = UDim2.new(0, 56, 0, 22)
+AutoFarmButton.Position = UDim2.new(1, -66, 0.5, -11)
+AutoFarmButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+AutoFarmButton.Text = "OFF"
+AutoFarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFarmButton.Font = Enum.Font.GothamBold
+AutoFarmButton.TextSize = 11
+AutoFarmButton.Parent = AutoFarmToggleFrame
+
+local AutoFarmBtnCorner = Instance.new("UICorner")
+AutoFarmBtnCorner.CornerRadius = UDim.new(0, 11)
+AutoFarmBtnCorner.Parent = AutoFarmButton
 
 -- ESP Toggle
 local EspToggleFrame = Instance.new("Frame")
@@ -431,6 +552,13 @@ AutoTpBtnCorner.Parent = AutoTpButton
 
 
 -- --- CONNECTIVITÉ DES BOUTONS DE L'INTERFACE ---
+AutoFarmButton.MouseButton1Click:Connect(function()
+	local newState = not AutoFarmActive
+	toggleAutoFarm(newState)
+	AutoFarmButton.Text = newState and "ON" or "OFF"
+	AutoFarmButton.BackgroundColor3 = newState and Color3.fromRGB(0, 160, 90) or Color3.fromRGB(200, 50, 50)
+end)
+
 EspButton.MouseButton1Click:Connect(function()
 	local newState = not EspActive
 	toggleEsp(newState)
@@ -466,7 +594,6 @@ SellAllRemoteButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- **LOGIQUE DÉCLENCHEMENT DU REMOTE HITWALL**
 HitWallButton.MouseButton1Click:Connect(function()
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	local serverFolder = remotes and remotes:FindFirstChild("Server")
@@ -476,7 +603,7 @@ HitWallButton.MouseButton1Click:Connect(function()
 		hitWallEvent:FireServer()
 		print("[RESEAU] HitWall envoyé avec succès.")
 	else
-		warn("[RESEAU] RemoteEvent 'HitWall' introuvable dans ReplicatedStorage.Remotes.Server")
+		warn("[RESEAU] RemoteEvent 'HitWall' introuvable.")
 	end
 end)
 
@@ -579,6 +706,7 @@ CancelBtn.MouseButton1Click:Connect(function() ConfirmationFrame.Visible = false
 AcceptBtn.MouseButton1Click:Connect(function()
 	toggleEsp(false)
 	toggleAutoTp(false)
+	toggleAutoFarm(false)
 	ScreenGui:Destroy()
 	print("[MENU] Menu détruit.")
 end)
