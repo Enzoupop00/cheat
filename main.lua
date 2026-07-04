@@ -80,7 +80,7 @@ if ancienMenu then
 	print("[ANTI-DOUBLON] Ancien menu détruit.")
 end
 
--- 1. CRÉATION DE L'INTERFACE PRINCIPALE (Agrandie à 370 pour faire place au Toggle)
+-- 1. CRÉATION DE L'INTERFACE PRINCIPALE
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GestionnaireMachineStylise"
 ScreenGui.ResetOnSpawn = false
@@ -118,7 +118,7 @@ TabCorner.Parent = TabBar
 
 local TabMachineBtn = Instance.new("TextButton")
 TabMachineBtn.Name = "TabMachineBtn"
-TabMachineBtn.Size = UDim2.new(0.5, 0, 1, 0)
+TabMachineBtn.Size = UDim2.new(0, 115, 1, 0)
 TabMachineBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 46)
 TabMachineBtn.Text = "Trait Machine"
 TabMachineBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -128,14 +128,30 @@ TabMachineBtn.Parent = TabBar
 
 local TabSettingsBtn = Instance.new("TextButton")
 TabSettingsBtn.Name = "TabSettingsBtn"
-TabSettingsBtn.Size = UDim2.new(0.5, 0, 1, 0)
-TabSettingsBtn.Position = UDim2.new(0.5, 0, 0, 0)
+TabSettingsBtn.Size = UDim2.new(0, 115, 1, 0)
+TabSettingsBtn.Position = UDim2.new(0, 115, 0, 0)
 TabSettingsBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
 TabSettingsBtn.Text = "Settings"
 TabSettingsBtn.TextColor3 = Color3.fromRGB(150, 150, 155)
 TabSettingsBtn.Font = Enum.Font.GothamBold
 TabSettingsBtn.TextSize = 13
 TabSettingsBtn.Parent = TabBar
+
+-- BOUTON DE FERMETURE (X)
+local CloseMenuBtn = Instance.new("TextButton")
+CloseMenuBtn.Name = "CloseMenuBtn"
+CloseMenuBtn.Size = UDim2.new(0, 30, 0, 26)
+CloseMenuBtn.Position = UDim2.new(1, -38, 0.5, -13)
+CloseMenuBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseMenuBtn.Text = "✕"
+CloseMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseMenuBtn.Font = Enum.Font.GothamBold
+CloseMenuBtn.TextSize = 12
+CloseMenuBtn.Parent = TabBar
+
+local CloseBtnCorner = Instance.new("UICorner")
+CloseBtnCorner.CornerRadius = UDim.new(0, 6)
+CloseBtnCorner.Parent = CloseMenuBtn
 
 -- CONTENU : ONGLET MACHINE
 local MachinePage = Instance.new("Frame")
@@ -226,7 +242,7 @@ LootStroke.Color = Color3.fromRGB(0, 210, 120)
 LootStroke.Thickness = 1.5
 LootStroke.Parent = LootClaimedButton
 
--- --- SECTION NOUVEAU TOGGLE : ESP HIGHLIGHT ---
+-- SECTION TOGGLE : ESP HIGHLIGHT
 local EspToggleFrame = Instance.new("Frame")
 EspToggleFrame.Name = "EspToggleFrame"
 EspToggleFrame.Size = UDim2.new(0, 260, 0, 42)
@@ -316,6 +332,87 @@ KeybindBtn.Parent = SettingsPage
 local KeybindCorner = Instance.new("UICorner")
 KeybindCorner.CornerRadius = UDim.new(0, 6)
 KeybindCorner.Parent = KeybindBtn
+
+-- --- SYSTÈME PANNEAU DE CONFIRMATION DE FERMETURE ---
+local ConfirmationFrame = Instance.new("Frame")
+ConfirmationFrame.Name = "ConfirmationFrame"
+ConfirmationFrame.Size = UDim2.new(1, 0, 1, 0)
+ConfirmationFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+ConfirmationFrame.BackgroundTransparency = 0.15
+ConfirmationFrame.BorderSizePixel = 0
+ConfirmationFrame.Visible = false
+ConfirmationFrame.ZIndex = 10
+ConfirmationFrame.Parent = MainFrame
+
+local ConfirmCorner = Instance.new("UICorner")
+ConfirmCorner.CornerRadius = UDim.new(0, 10)
+ConfirmCorner.Parent = ConfirmationFrame
+
+local ConfirmTitle = Instance.new("TextLabel")
+ConfirmTitle.Size = UDim2.new(1, 0, 0, 60)
+ConfirmTitle.Position = UDim2.new(0, 0, 0.25, 0)
+ConfirmTitle.BackgroundTransparency = 1
+ConfirmTitle.Text = "Voulez-vous vraiment\nfermer ce menu ?"
+ConfirmTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConfirmTitle.Font = Enum.Font.GothamBold
+ConfirmTitle.TextSize = 16
+ConfirmTitle.ZIndex = 11
+ConfirmTitle.Parent = ConfirmationFrame
+
+local AcceptBtn = Instance.new("TextButton")
+AcceptBtn.Name = "AcceptBtn"
+AcceptBtn.Size = UDim2.new(0, 110, 0, 38)
+AcceptBtn.Position = UDim2.new(0.5, -120, 0.55, 0)
+AcceptBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+AcceptBtn.Text = "Accepter"
+AcceptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AcceptBtn.Font = Enum.Font.GothamBold
+AcceptBtn.TextSize = 13
+AcceptBtn.ZIndex = 11
+AcceptBtn.Parent = ConfirmationFrame
+
+local AcceptCorner = Instance.new("UICorner")
+AcceptCorner.CornerRadius = UDim.new(0, 6)
+AcceptCorner.Parent = AcceptBtn
+
+local CancelBtn = Instance.new("TextButton")
+CancelBtn.Name = "CancelBtn"
+CancelBtn.Size = UDim2.new(0, 110, 0, 38)
+CancelBtn.Position = UDim2.new(0.5, 10, 0.55, 0)
+CancelBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+CancelBtn.Text = "Annuler"
+CancelBtn.TextColor3 = Color3.fromRGB(200, 200, 205)
+CancelBtn.Font = Enum.Font.GothamBold
+CancelBtn.TextSize = 13
+CancelBtn.ZIndex = 11
+CancelBtn.Parent = ConfirmationFrame
+
+local CancelCorner = Instance.new("UICorner")
+CancelCorner.CornerRadius = UDim.new(0, 6)
+CancelCorner.Parent = CancelBtn
+
+-- Logique d'affichage et actions de fermeture
+CloseMenuBtn.MouseButton1Click:Connect(function()
+	ConfirmationFrame.Visible = true
+end)
+
+CancelBtn.MouseButton1Click:Connect(function()
+	ConfirmationFrame.Visible = false
+end)
+
+AcceptBtn.MouseButton1Click:Connect(function()
+	toggleEsp(false) -- Arrête proprement le système de scan/highlights
+	ScreenGui:Destroy() -- Détruit complètement l'interface
+	print("[MENU] Menu fermé et détruit définitivement.")
+end)
+
+-- Hover effets pour bouton de fermeture
+CloseMenuBtn.MouseEnter:Connect(function() CloseMenuBtn.BackgroundColor3 = Color3.fromRGB(230, 40, 40) end)
+CloseMenuBtn.MouseLeave:Connect(function() CloseMenuBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end)
+AcceptBtn.MouseEnter:Connect(function() AcceptBtn.BackgroundColor3 = Color3.fromRGB(230, 40, 40) end)
+AcceptBtn.MouseLeave:Connect(function() AcceptBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end)
+CancelBtn.MouseEnter:Connect(function() CancelBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75) end)
+CancelBtn.MouseLeave:Connect(function() CancelBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55) end)
 
 -- 2. RÉCUPÉRATION EN TEMPS RÉEL DE LA VALEUR "AMOUNT"
 task.spawn(function()
