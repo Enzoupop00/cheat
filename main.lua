@@ -75,7 +75,6 @@ local AutoTpActive = false
 local AutoTpConnection = nil
 
 local function checkAndTeleport(text)
-	-- Supprime les espaces pour être sûr de détecter "15/15" ou "15 / 15"
 	local cleanText = string.gsub(text, "%s+", "")
 	if cleanText == "15/15" then
 		local character = LocalPlayer.Character
@@ -103,17 +102,14 @@ local function toggleAutoTp(state)
 			local amountLabel = backpackFrame and backpackFrame:WaitForChild("Amount", 5)
 			
 			if amountLabel and (amountLabel:IsA("TextLabel") or amountLabel:IsA("TextBox")) then
-				-- Vérification immédiate au cas où c'est déjà à 15/15
 				checkAndTeleport(amountLabel.Text)
-				
-				-- Écoute des changements de texte
 				AutoTpConnection = amountLabel:GetPropertyChangedSignal("Text"):Connect(function()
 					if AutoTpActive then
 						checkAndTeleport(amountLabel.Text)
 					end
 				end)
 			else
-				warn("[AUTO-TP] UI 'Amount' introuvable dans PlayerGui.Main.Wins.BackpackFrame")
+				warn("[AUTO-TP] UI 'Amount' introuvable.")
 			end
 		end)
 	else
@@ -132,7 +128,7 @@ if ancienMenu then
 	print("[ANTI-DOUBLON] Ancien menu détruit.")
 end
 
--- 1. CRÉATION DE L'INTERFACE PRINCIPALE (Agrandie à 420 en hauteur pour les 2 Toggles)
+-- 1. CRÉATION DE L'INTERFACE PRINCIPALE (Agrandie à 510 pour loger tous les boutons)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GestionnaireMachineStylise"
 ScreenGui.ResetOnSpawn = false
@@ -140,8 +136,8 @@ ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 420)
-MainFrame.Position = UDim2.new(0.5, -150, 0.4, -210)
+MainFrame.Size = UDim2.new(0, 300, 0, 510)
+MainFrame.Position = UDim2.new(0.5, -150, 0.4, -255)
 MainFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -294,11 +290,43 @@ LootStroke.Color = Color3.fromRGB(0, 210, 120)
 LootStroke.Thickness = 1.5
 LootStroke.Parent = LootClaimedButton
 
--- --- TOGGLE 1 : ESP HIGHLIGHT ---
+-- BOUTON N°1 : OUVRIR SELLING FRAME (Via Module InterfaceClient)
+local OpenSaleUiButton = Instance.new("TextButton")
+OpenSaleUiButton.Name = "OpenSaleUiButton"
+OpenSaleUiButton.Size = UDim2.new(0, 125, 0, 38)
+OpenSaleUiButton.Position = UDim2.new(0.5, -130, 0, 242)
+OpenSaleUiButton.BackgroundColor3 = Color3.fromRGB(140, 20, 200)
+OpenSaleUiButton.Text = "Ouvrir Vente UI"
+OpenSaleUiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenSaleUiButton.Font = Enum.Font.GothamMedium
+OpenSaleUiButton.TextSize = 13
+OpenSaleUiButton.Parent = MachinePage
+
+local SaleUiCorner = Instance.new("UICorner")
+SaleUiCorner.CornerRadius = UDim.new(0, 6)
+SaleUiCorner.Parent = OpenSaleUiButton
+
+-- BOUTON N°2 : SELL ALL LOOT REMOTE
+local SellAllRemoteButton = Instance.new("TextButton")
+SellAllRemoteButton.Name = "SellAllRemoteButton"
+SellAllRemoteButton.Size = UDim2.new(0, 125, 0, 38)
+SellAllRemoteButton.Position = UDim2.new(0.5, 5, 0, 242)
+SellAllRemoteButton.BackgroundColor3 = Color3.fromRGB(230, 130, 10)
+SellAllRemoteButton.Text = "Tout Vendre (Remote)"
+SellAllRemoteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SellAllRemoteButton.Font = Enum.Font.GothamMedium
+SellAllRemoteButton.TextSize = 12
+SellAllRemoteButton.Parent = MachinePage
+
+local SellRemoteCorner = Instance.new("UICorner")
+SellRemoteCorner.CornerRadius = UDim.new(0, 6)
+SellRemoteCorner.Parent = SellAllRemoteButton
+
+-- TOGGLE 1 : ESP HIGHLIGHT
 local EspToggleFrame = Instance.new("Frame")
 EspToggleFrame.Name = "EspToggleFrame"
 EspToggleFrame.Size = UDim2.new(0, 260, 0, 42)
-EspToggleFrame.Position = UDim2.new(0.5, -130, 0, 250)
+EspToggleFrame.Position = UDim2.new(0.5, -130, 0, 295)
 EspToggleFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
 EspToggleFrame.Parent = MachinePage
 
@@ -344,11 +372,11 @@ EspButton.MouseButton1Click:Connect(function()
 	EspButton.BackgroundColor3 = newState and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(200, 60, 60)
 end)
 
--- --- TOGGLE 2 : AUTO TP SPAWNPOINT ---
+-- TOGGLE 2 : AUTO TP SPAWNPOINT
 local AutoTpToggleFrame = Instance.new("Frame")
 AutoTpToggleFrame.Name = "AutoTpToggleFrame"
 AutoTpToggleFrame.Size = UDim2.new(0, 260, 0, 42)
-AutoTpToggleFrame.Position = UDim2.new(0.5, -130, 0, 305) -- Positionné juste sous l'ESP
+AutoTpToggleFrame.Position = UDim2.new(0.5, -130, 0, 350)
 AutoTpToggleFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
 AutoTpToggleFrame.Parent = MachinePage
 
@@ -394,6 +422,32 @@ AutoTpButton.MouseButton1Click:Connect(function()
 	AutoTpButton.BackgroundColor3 = newState and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(200, 60, 60)
 end)
 
+-- LOGIQUE LOGICIELLE DE L'ONGLET : OUVRIR LA FRAME DE VENTE
+OpenSaleUiButton.MouseButton1Click:Connect(function()
+	pcall(function()
+		local ClientMod = ReplicatedStorage:WaitForChild("Client")
+		local InterfaceClient = require(ClientMod:WaitForChild("InterfaceClient"))
+		if InterfaceClient and InterfaceClient.Frames and InterfaceClient.Frames.SellingFrame then
+			InterfaceClient:Open(InterfaceClient.Frames.SellingFrame)
+			print("[UI] Vente UI (SellingFrame) ouverte avec succès.")
+		end
+	end)
+end)
+
+-- LOGIQUE LOGICIELLE DE L'ONGLET : DECLENCHER SELLALL LOOT
+SellAllRemoteButton.MouseButton1Click:Connect(function()
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	local serverFolder = remotes and remotes:FindFirstChild("Server")
+	local sellEvent = serverFolder and serverFolder:FindFirstChild("SellAllLoot")
+	
+	if sellEvent and sellEvent:IsA("RemoteEvent") then
+		sellEvent:FireServer()
+		print("[RESEAU] SellAllLoot envoyé au serveur.")
+	else
+		warn("[RESEAU] RemoteEvent 'SellAllLoot' introuvable.")
+	end
+end)
+
 -- CONTENU : ONGLET SETTINGS
 local SettingsPage = Instance.new("Frame")
 SettingsPage.Name = "SettingsPage"
@@ -429,7 +483,7 @@ local KeybindCorner = Instance.new("UICorner")
 KeybindCorner.CornerRadius = UDim.new(0, 6)
 KeybindCorner.Parent = KeybindBtn
 
--- --- PANNEAU DE CONFIRMATION DE FERMETURE ---
+-- PANNEAU DE CONFIRMATION DE FERMETURE
 local ConfirmationFrame = Instance.new("Frame")
 ConfirmationFrame.Name = "ConfirmationFrame"
 ConfirmationFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -504,6 +558,10 @@ AcceptBtn.MouseEnter:Connect(function() AcceptBtn.BackgroundColor3 = Color3.from
 AcceptBtn.MouseLeave:Connect(function() AcceptBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end)
 CancelBtn.MouseEnter:Connect(function() CancelBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75) end)
 CancelBtn.MouseLeave:Connect(function() CancelBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55) end)
+OpenSaleUiButton.MouseEnter:Connect(function() OpenSaleUiButton.BackgroundColor3 = Color3.fromRGB(160, 30, 220) end)
+OpenSaleUiButton.MouseLeave:Connect(function() OpenSaleUiButton.BackgroundColor3 = Color3.fromRGB(140, 20, 200) end)
+SellAllRemoteButton.MouseEnter:Connect(function() SellAllRemoteButton.BackgroundColor3 = Color3.fromRGB(250, 150, 20) end)
+SellAllRemoteButton.MouseLeave:Connect(function() SellAllRemoteButton.BackgroundColor3 = Color3.fromRGB(230, 130, 10) end)
 
 -- 2. RÉCUPÉRATION EN TEMPS RÉEL DE LA VALEUR "AMOUNT"
 task.spawn(function()
@@ -626,7 +684,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- 7. LOGIQUE DES BOUTONS REMOTEEVENTS
+-- 7. LOGIQUE DES BOUTONS REMOTEEVENTS PRE-EXISTANTS
 ActionButton.MouseButton1Click:Connect(function()
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if not remotes then return end
@@ -673,7 +731,7 @@ LootClaimedButton.MouseButton1Click:Connect(function()
 			print("[HITBOX] ClaimHitbox remise à sa place d'origine.")
 		end)
 	else
-		warn("[HITBOX] Impossible de déplacer la pièce (ClaimHitbox ou HumanoidRootPart manquante).")
+		warn("[HITBOX] Impossible de déplacer la pièce.")
 	end
 end)
 
