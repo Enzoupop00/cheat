@@ -12,6 +12,67 @@ local CurrentKeybind = Enum.KeyCode.L
 local IsChangingKeybind = false
 local IsTeleportingHitbox = false -- Anti-spam pour la hitbox
 
+-- --- SYSTÈME DE TOGGLE (DEUXIÈME SCRIPT) ---
+local EspActive = false
+local EspConnection = nil
+
+local CONFIG_CIBLES = {
+	["Dark Matter"]   = Color3.fromRGB(0, 0, 139),
+	["Acid Barrel"]   = Color3.fromRGB(0, 100, 0),
+	["Moon"]          = Color3.fromRGB(48, 25, 52),
+	["Glitched Cube"] = Color3.fromRGB(75, 0, 130),
+}
+
+local function injectHighlight(objet)
+	if objet:IsDescendantOf(game:GetService("CoreGui")) then return end
+	local couleurAssociee = CONFIG_CIBLES[objet.Name]
+	if couleurAssociee and (objet:IsA("BasePart") or objet:IsA("Model")) then
+		if not objet:FindFirstChild("AntiCheatTestHighlight") then
+			local highlight = Instance.new("Highlight")
+			highlight.Name = "AntiCheatTestHighlight"
+			highlight.FillColor = couleurAssociee
+			highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+			highlight.FillTransparency = 0.4
+			highlight.OutlineTransparency = 0
+			highlight.Parent = objet
+		end
+	end
+end
+
+local function removeAllHighlights()
+	for _, objet in pairs(game:GetDescendants()) do
+		pcall(function()
+			local hl = objet:FindFirstChild("AntiCheatTestHighlight")
+			if hl then hl:Destroy() end
+		end)
+	end
+end
+
+local function toggleEsp(state)
+	EspActive = state
+	if EspActive then
+		-- Scan initial
+		for _, objet in pairs(game:GetDescendants()) do
+			pcall(function() injectHighlight(objet) end)
+		end
+		-- Écoute des nouveaux objets
+		EspConnection = game.DescendantAdded:Connect(function(nouvelObjet)
+			task.defer(function()
+				pcall(function() injectHighlight(nouvelObjet) end)
+			end)
+		end)
+		print("[ESP] Activé")
+	else
+		-- Déconnexion et nettoyage
+		if EspConnection then
+			EspConnection:Disconnect()
+			EspConnection = nil
+		end
+		removeAllHighlights()
+		print("[ESP] Désactivé")
+	end
+end
+
 -- --- SYSTÈME D'ANTI-DOUBLON ---
 local ancienMenu = PlayerGui:FindFirstChild("GestionnaireMachineStylise")
 if ancienMenu then
@@ -19,7 +80,7 @@ if ancienMenu then
 	print("[ANTI-DOUBLON] Ancien menu détruit.")
 end
 
--- 1. CRÉATION DE L'INTERFACE PRINCIPALE
+-- 1. CRÉATION DE L'INTERFACE PRINCIPALE (Agrandie à 370 pour faire place au Toggle)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GestionnaireMachineStylise"
 ScreenGui.ResetOnSpawn = false
@@ -27,8 +88,8 @@ ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 310)
-MainFrame.Position = UDim2.new(0.5, -150, 0.4, -155)
+MainFrame.Size = UDim2.new(0, 300, 0, 370)
+MainFrame.Position = UDim2.new(0.5, -150, 0.4, -185)
 MainFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -164,6 +225,62 @@ local LootStroke = Instance.new("UIStroke")
 LootStroke.Color = Color3.fromRGB(0, 210, 120)
 LootStroke.Thickness = 1.5
 LootStroke.Parent = LootClaimedButton
+
+-- --- SECTION NOUVEAU TOGGLE : ESP HIGHLIGHT ---
+local EspToggleFrame = Instance.new("Frame")
+EspToggleFrame.Name = "EspToggleFrame"
+EspToggleFrame.Size = UDim2.new(0, 260, 0, 42)
+EspToggleFrame.Position = UDim2.new(0.5, -130, 0, 250)
+EspToggleFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
+EspToggleFrame.Parent = MachinePage
+
+local EspToggleCorner = Instance.new("UICorner")
+EspToggleCorner.CornerRadius = UDim.new(0, 6)
+EspToggleCorner.Parent = EspToggleFrame
+
+local EspToggleStroke = Instance.new("UIStroke")
+EspToggleStroke.Color = Color3.fromRGB(45, 45, 50)
+EspToggleStroke.Thickness = 1
+EspToggleStroke.Parent = EspToggleFrame
+
+local EspLabel = Instance.new("TextLabel")
+EspLabel.Size = UDim2.new(0, 150, 1, 0)
+EspLabel.Position = UDim2.new(0, 12, 0, 0)
+EspLabel.BackgroundTransparency = 1
+EspLabel.Text = "Activer ESP Items"
+EspLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+EspLabel.Font = Enum.Font.GothamMedium
+EspLabel.TextSize = 13
+EspLabel.TextXAlignment = Enum.TextXAlignment.Left
+EspLabel.Parent = EspToggleFrame
+
+local EspButton = Instance.new("TextButton")
+EspButton.Name = "EspButton"
+EspButton.Size = UDim2.new(0, 60, 0, 26)
+EspButton.Position = UDim2.new(1, -72, 0.5, -13)
+EspButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+EspButton.Text = "OFF"
+EspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+EspButton.Font = Enum.Font.GothamBold
+EspButton.TextSize = 12
+EspButton.Parent = EspToggleFrame
+
+local EspBtnCorner = Instance.new("UICorner")
+EspBtnCorner.CornerRadius = UDim.new(0, 13)
+EspBtnCorner.Parent = EspButton
+
+EspButton.MouseButton1Click:Connect(function()
+	local newState = not EspActive
+	toggleEsp(newState)
+	
+	if newState then
+		EspButton.Text = "ON"
+		EspButton.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+	else
+		EspButton.Text = "OFF"
+		EspButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+	end
+end)
 
 -- CONTENU : ONGLET SETTINGS
 local SettingsPage = Instance.new("Frame")
@@ -339,7 +456,6 @@ end)
 
 -- LOGIQUE DU BOUTON LOOT CLAIMED + DÉPLACEMENT DE LA HITBOX
 LootClaimedButton.MouseButton1Click:Connect(function()
-	-- 1. Déclenchement du RemoteEvent
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if remotes then
 		local clientFolder = remotes:FindFirstChild("Client")
@@ -350,8 +466,7 @@ LootClaimedButton.MouseButton1Click:Connect(function()
 		end
 	end
 
-	-- 2. Téléportation temporaire de la ClaimHitbox
-	if IsTeleportingHitbox then return end -- Sécurité anti-spam pendant les 3 secondes
+	if IsTeleportingHitbox then return end
 
 	local map = Workspace:FindFirstChild("Map")
 	local markers = map and map:FindFirstChild("Markers")
@@ -362,15 +477,10 @@ LootClaimedButton.MouseButton1Click:Connect(function()
 
 	if hitbox and hitbox:IsA("BasePart") and hrp then
 		IsTeleportingHitbox = true
-		
-		-- Sauvegarde de la position et de l'orientation d'origine
 		local originalCFrame = hitbox.CFrame
-		
-		-- Déplacement sur le joueur
 		hitbox.CFrame = hrp.CFrame
 		print("[HITBOX] ClaimHitbox déplacée sur le joueur.")
 
-		-- Attente de 3 secondes en arrière-plan pour ne pas bloquer le script
 		task.delay(3, function()
 			hitbox.CFrame = originalCFrame
 			IsTeleportingHitbox = false
