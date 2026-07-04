@@ -12,7 +12,7 @@ local CurrentKeybind = Enum.KeyCode.L
 local IsChangingKeybind = false
 local IsTeleportingHitbox = false -- Anti-spam pour la hitbox
 
--- --- SYSTÈME DE TOGGLE (DEUXIÈME SCRIPT) ---
+-- --- SYSTÈME DE TOGGLE (DEUXIÈME SCRIPT : ESP) ---
 local EspActive = false
 local EspConnection = nil
 
@@ -51,11 +51,9 @@ end
 local function toggleEsp(state)
 	EspActive = state
 	if EspActive then
-		-- Scan initial
 		for _, objet in pairs(game:GetDescendants()) do
 			pcall(function() injectHighlight(objet) end)
 		end
-		-- Écoute des nouveaux objets
 		EspConnection = game.DescendantAdded:Connect(function(nouvelObjet)
 			task.defer(function()
 				pcall(function() injectHighlight(nouvelObjet) end)
@@ -63,13 +61,67 @@ local function toggleEsp(state)
 		end)
 		print("[ESP] Activé")
 	else
-		-- Déconnexion et nettoyage
 		if EspConnection then
 			EspConnection:Disconnect()
 			EspConnection = nil
 		end
 		removeAllHighlights()
 		print("[ESP] Désactivé")
+	end
+end
+
+-- --- SYSTÈME DE TOGGLE AUTO TP (15 / 15) ---
+local AutoTpActive = false
+local AutoTpConnection = nil
+
+local function checkAndTeleport(text)
+	-- Supprime les espaces pour être sûr de détecter "15/15" ou "15 / 15"
+	local cleanText = string.gsub(text, "%s+", "")
+	if cleanText == "15/15" then
+		local character = LocalPlayer.Character
+		local hrp = character and character:FindFirstChild("HumanoidRootPart")
+		
+		local spawnpoint = Workspace:FindFirstChild("Map") 
+			and Workspace.Map:FindFirstChild("Markers") 
+			and Workspace.Map.Markers:FindFirstChild("Spawnpoint")
+		
+		if hrp and spawnpoint and spawnpoint:IsA("BasePart") then
+			hrp.CFrame = spawnpoint.CFrame
+			print("[AUTO-TP] Inventaire plein (15/15) ! Téléportation au Spawnpoint.")
+		end
+	end
+end
+
+local function toggleAutoTp(state)
+	AutoTpActive = state
+	if AutoTpActive then
+		print("[AUTO-TP] Activé")
+		task.spawn(function()
+			local mainGui = PlayerGui:WaitForChild("Main", 5)
+			local wins = mainGui and mainGui:WaitForChild("Wins", 5)
+			local backpackFrame = wins and wins:WaitForChild("BackpackFrame", 5)
+			local amountLabel = backpackFrame and backpackFrame:WaitForChild("Amount", 5)
+			
+			if amountLabel and (amountLabel:IsA("TextLabel") or amountLabel:IsA("TextBox")) then
+				-- Vérification immédiate au cas où c'est déjà à 15/15
+				checkAndTeleport(amountLabel.Text)
+				
+				-- Écoute des changements de texte
+				AutoTpConnection = amountLabel:GetPropertyChangedSignal("Text"):Connect(function()
+					if AutoTpActive then
+						checkAndTeleport(amountLabel.Text)
+					end
+				end)
+			else
+				warn("[AUTO-TP] UI 'Amount' introuvable dans PlayerGui.Main.Wins.BackpackFrame")
+			end
+		end)
+	else
+		print("[AUTO-TP] Désactivé")
+		if AutoTpConnection then
+			AutoTpConnection:Disconnect()
+			AutoTpConnection = nil
+		end
 	end
 end
 
@@ -80,7 +132,7 @@ if ancienMenu then
 	print("[ANTI-DOUBLON] Ancien menu détruit.")
 end
 
--- 1. CRÉATION DE L'INTERFACE PRINCIPALE
+-- 1. CRÉATION DE L'INTERFACE PRINCIPALE (Agrandie à 420 en hauteur pour les 2 Toggles)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GestionnaireMachineStylise"
 ScreenGui.ResetOnSpawn = false
@@ -88,8 +140,8 @@ ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 370)
-MainFrame.Position = UDim2.new(0.5, -150, 0.4, -185)
+MainFrame.Size = UDim2.new(0, 300, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -150, 0.4, -210)
 MainFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -242,7 +294,7 @@ LootStroke.Color = Color3.fromRGB(0, 210, 120)
 LootStroke.Thickness = 1.5
 LootStroke.Parent = LootClaimedButton
 
--- SECTION TOGGLE : ESP HIGHLIGHT
+-- --- TOGGLE 1 : ESP HIGHLIGHT ---
 local EspToggleFrame = Instance.new("Frame")
 EspToggleFrame.Name = "EspToggleFrame"
 EspToggleFrame.Size = UDim2.new(0, 260, 0, 42)
@@ -288,14 +340,58 @@ EspBtnCorner.Parent = EspButton
 EspButton.MouseButton1Click:Connect(function()
 	local newState = not EspActive
 	toggleEsp(newState)
-	
-	if newState then
-		EspButton.Text = "ON"
-		EspButton.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
-	else
-		EspButton.Text = "OFF"
-		EspButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-	end
+	EspButton.Text = newState and "ON" or "OFF"
+	EspButton.BackgroundColor3 = newState and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(200, 60, 60)
+end)
+
+-- --- TOGGLE 2 : AUTO TP SPAWNPOINT ---
+local AutoTpToggleFrame = Instance.new("Frame")
+AutoTpToggleFrame.Name = "AutoTpToggleFrame"
+AutoTpToggleFrame.Size = UDim2.new(0, 260, 0, 42)
+AutoTpToggleFrame.Position = UDim2.new(0.5, -130, 0, 305) -- Positionné juste sous l'ESP
+AutoTpToggleFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
+AutoTpToggleFrame.Parent = MachinePage
+
+local AutoTpToggleCorner = Instance.new("UICorner")
+AutoTpToggleCorner.CornerRadius = UDim.new(0, 6)
+AutoTpToggleCorner.Parent = AutoTpToggleFrame
+
+local AutoTpToggleStroke = Instance.new("UIStroke")
+AutoTpToggleStroke.Color = Color3.fromRGB(45, 45, 50)
+AutoTpToggleStroke.Thickness = 1
+AutoTpToggleStroke.Parent = AutoTpToggleFrame
+
+local AutoTpLabel = Instance.new("TextLabel")
+AutoTpLabel.Size = UDim2.new(0, 150, 1, 0)
+AutoTpLabel.Position = UDim2.new(0, 12, 0, 0)
+AutoTpLabel.BackgroundTransparency = 1
+AutoTpLabel.Text = "Auto TP (15/15)"
+AutoTpLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+AutoTpLabel.Font = Enum.Font.GothamMedium
+AutoTpLabel.TextSize = 13
+AutoTpLabel.TextXAlignment = Enum.TextXAlignment.Left
+AutoTpLabel.Parent = AutoTpToggleFrame
+
+local AutoTpButton = Instance.new("TextButton")
+AutoTpButton.Name = "AutoTpButton"
+AutoTpButton.Size = UDim2.new(0, 60, 0, 26)
+AutoTpButton.Position = UDim2.new(1, -72, 0.5, -13)
+AutoTpButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+AutoTpButton.Text = "OFF"
+AutoTpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoTpButton.Font = Enum.Font.GothamBold
+AutoTpButton.TextSize = 12
+AutoTpButton.Parent = AutoTpToggleFrame
+
+local AutoTpBtnCorner = Instance.new("UICorner")
+AutoTpBtnCorner.CornerRadius = UDim.new(0, 13)
+AutoTpBtnCorner.Parent = AutoTpButton
+
+AutoTpButton.MouseButton1Click:Connect(function()
+	local newState = not AutoTpActive
+	toggleAutoTp(newState)
+	AutoTpButton.Text = newState and "ON" or "OFF"
+	AutoTpButton.BackgroundColor3 = newState and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(200, 60, 60)
 end)
 
 -- CONTENU : ONGLET SETTINGS
@@ -333,7 +429,7 @@ local KeybindCorner = Instance.new("UICorner")
 KeybindCorner.CornerRadius = UDim.new(0, 6)
 KeybindCorner.Parent = KeybindBtn
 
--- --- SYSTÈME PANNEAU DE CONFIRMATION DE FERMETURE ---
+-- --- PANNEAU DE CONFIRMATION DE FERMETURE ---
 local ConfirmationFrame = Instance.new("Frame")
 ConfirmationFrame.Name = "ConfirmationFrame"
 ConfirmationFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -350,7 +446,7 @@ ConfirmCorner.Parent = ConfirmationFrame
 
 local ConfirmTitle = Instance.new("TextLabel")
 ConfirmTitle.Size = UDim2.new(1, 0, 0, 60)
-ConfirmTitle.Position = UDim2.new(0, 0, 0.25, 0)
+ConfirmTitle.Position = UDim2.new(0, 0, 0.3, 0)
 ConfirmTitle.BackgroundTransparency = 1
 ConfirmTitle.Text = "Voulez-vous vraiment\nfermer ce menu ?"
 ConfirmTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -391,22 +487,17 @@ local CancelCorner = Instance.new("UICorner")
 CancelCorner.CornerRadius = UDim.new(0, 6)
 CancelCorner.Parent = CancelBtn
 
--- Logique d'affichage et actions de fermeture
-CloseMenuBtn.MouseButton1Click:Connect(function()
-	ConfirmationFrame.Visible = true
-end)
-
-CancelBtn.MouseButton1Click:Connect(function()
-	ConfirmationFrame.Visible = false
-end)
+CloseMenuBtn.MouseButton1Click:Connect(function() ConfirmationFrame.Visible = true end)
+CancelBtn.MouseButton1Click:Connect(function() ConfirmationFrame.Visible = false end)
 
 AcceptBtn.MouseButton1Click:Connect(function()
-	toggleEsp(false) -- Arrête proprement le système de scan/highlights
-	ScreenGui:Destroy() -- Détruit complètement l'interface
+	toggleEsp(false)
+	toggleAutoTp(false)
+	ScreenGui:Destroy()
 	print("[MENU] Menu fermé et détruit définitivement.")
 end)
 
--- Hover effets pour bouton de fermeture
+-- Hover effets
 CloseMenuBtn.MouseEnter:Connect(function() CloseMenuBtn.BackgroundColor3 = Color3.fromRGB(230, 40, 40) end)
 CloseMenuBtn.MouseLeave:Connect(function() CloseMenuBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end)
 AcceptBtn.MouseEnter:Connect(function() AcceptBtn.BackgroundColor3 = Color3.fromRGB(230, 40, 40) end)
@@ -536,7 +627,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 -- 7. LOGIQUE DES BOUTONS REMOTEEVENTS
--- Bouton Action Principal (Démarrer Machine)
 ActionButton.MouseButton1Click:Connect(function()
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if not remotes then return end
@@ -551,7 +641,6 @@ ActionButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- LOGIQUE DU BOUTON LOOT CLAIMED + DÉPLACEMENT DE LA HITBOX
 LootClaimedButton.MouseButton1Click:Connect(function()
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if remotes then
